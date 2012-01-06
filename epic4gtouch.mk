@@ -80,7 +80,7 @@ PRODUCT_COPY_FILES += \
 	device/samsung/epic4gtouch/mxt224_ts_input.idc:system/usr/idc/mxt224_ts_input.idc \
 	device/samsung/epic4gtouch/sec_ts_ics_bio.idc:system/usr/idc/sec_ts_ics_bio.idc 
 	
- PRODUCT_COPY_FILES += \
+PRODUCT_COPY_FILES += \
   device/samsung/epic4gtouch/configs/nvram_net.txt:system/etc/nvram_net.txt \
   device/samsung/epic4gtouch/configs/wpa_supplicant.conf:system/etc/wifi/wpa_supplicant.conf \
   device/samsung/epic4gtouch/configs/bcmdhd.cal:system/etc/wifi/bcmdhd.cal
@@ -100,17 +100,56 @@ PRODUCT_PROPERTY_OVERRIDES := \
 # These are the hardware-specific settings that are stored in system properties.
 # Note that the only such settings should be the ones that are too low-level to
 # be reachable from resources or other mechanisms.
+#PRODUCT_PROPERTY_OVERRIDES += \
+#       wifi.interface=eth0 \
+#       wifi.supplicant_scan_interval=15 \
+#       ro.telephony.sends_barcount=1 \
+#       mobiledata.interfaces=pdp0,eth0,gprs,ppp0 \
+#	   ro.telephony.ril_class=samsung \
+#       dalvik.vm.heapsize=64m \
+#       persist.service.usb.setting=0 \
+#       dev.sfbootcomplete=0 \
+#	   ro.telephony.default_network=4 \
+#       ro.ril.def.agps.mode=2 \
+#       ro.cdma.home.operator.numeric=310120 \
+#       ro.cdma.home.operator.alpha=Sprint \
+#       ro.config.vc_call_vol_steps=15 \
+#       ro.telephony.call_ring.multiple=false \
+#       ro.telephony.call_ring.delay=3000 \
+#       net.cdma.datalinkinterface=/dev/ttyCDMA0 \
+#       net.cdma.ppp.interface=ppp0 \
+#       net.connectivity.type=CDMA1 \
+#       net.interfaces.defaultroute=cdma \
+#       mobiledata.interfaces=ppp0 \
+#       ro.ril.samsung_cdma=true \
+#       ro.telephony.ril.v3=datacall \
+#	   persist.sys.strictmode.visual=0
 PRODUCT_PROPERTY_OVERRIDES += \
        wifi.interface=eth0 \
-       wifi.supplicant_scan_interval=15 \
-       ro.telephony.sends_barcount=1 \
-       mobiledata.interfaces=pdp0,eth0,gprs,ppp0 \
-	   ro.ril.samsung_cdma=true \
-	   ro.telephony.ril.v3=1 \
-	   ro.telephony.ril_class=samsung \
+       wifi.supplicant_scan_interval=20 \
        dalvik.vm.heapsize=64m \
        persist.service.usb.setting=0 \
-       dev.sfbootcomplete=0	   
+       dev.sfbootcomplete=0 \
+       persist.sys.vold.switchexternal=1 \
+	   persist.sys.usb.config=mass_storage
+	   
+# Telephony property for CDMA
+PRODUCT_PROPERTY_OVERRIDES += \
+    ro.config.vc_call_vol_steps=15 \
+    ro.telephony.default_network=4 \
+    ro.com.google.clientidbase=android-sprint-us \
+    ro.cdma.home.operator.numeric=310120 \
+    ro.cdma.home.operator.alpha=Sprint \
+    net.cdma.pppd.authtype=require-pap \
+    net.cdma.pppd.user=user[SPACE]SprintNextel \
+    net.cdma.datalinkinterface=/dev/ttyCDMA0 \
+    net.interfaces.defaultroute=cdma \
+    net.cdma.ppp.interface=ppp0 \
+    net.connectivity.type=CDMA1 \
+    mobiledata.interfaces=eth0,ppp0 \
+    ro.telephony.ril_class=samsung \
+    ro.ril.samsung_cdma=true \
+    ro.carrier=Sprint
 
 $(call inherit-product-if-exists, hardware/broadcom/wlan/bcmdhd/firmware/bcm4330/device-bcm.mk)
 
@@ -126,7 +165,8 @@ PRODUCT_PACKAGES := \
 	audio_policy.smdkv310 \
 	audio.a2dp.default \
 	libaudio \
-	#gps.smdkv310 \
+	libexifa \
+	libjpega \
 	smdkv310_hdcp_keys \
 	com.android.future.usb.accessory
 	
@@ -172,7 +212,7 @@ PRODUCT_AAPT_PREF_CONFIG := hdpi
 PRODUCT_LOCALES += hdpi
 
 # kernel modules for ramdisk
-RAMDISK_MODULES = $(addprefix device/samsung/epic4gtouch/modules/,dhd.ko j4fs.ko \
+RAMDISK_MODULES = $(addprefix device/samsung/epic4gtouch/modules/, dhd.ko bthid.ko j4fs.ko \
 	scsi_wait_scan.ko vibrator.ko cyasswitch.ko)
 PRODUCT_COPY_FILES += $(foreach module,\
 	$(RAMDISK_MODULES),\
@@ -180,7 +220,7 @@ PRODUCT_COPY_FILES += $(foreach module,\
 
 # other kernel modules not in ramdisk
 PRODUCT_COPY_FILES += $(foreach module,\
-	$(filter-out $(RAMDISK_MODULES),$(wildcard device/samsung/epic4gtouch/*.ko)),\
+	$(filter-out $(RAMDISK_MODULES),$(wildcard device/samsung/epic4gtouch/modules/*.ko)),\
 	$(module):system/lib/modules/$(notdir $(module)))
 
 # kernel modules for recovery ramdisk

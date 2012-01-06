@@ -93,13 +93,22 @@ loglevel 3
     write /dev/cpuctl/bg_non_interactive/cpu.shares 52
 
 # ko files for FM Radio
-    insmod /lib/modules/Si4709_driver.ko
-    
+#    insmod /lib/modules/Si4709_driver.ko
+
+# ko files for VIbrator
+    insmod /lib/modules/vibrator.ko
+
+# ko files for wimax
+    insmod /lib/modules/cmc7xx_sdio.ko
+
+# ko files for bthid
+    insmod /lib/modules/bthid.ko    
+	
 on fs
 # mount ext4 partitions
     # Mount /system rw first to give the filesystem a chance to save a checkpoint
     mount ext4 /dev/block/mmcblk0p9 /system
-    mount ext4 /dev/block/mmcblk0p9 /system ro wait remount
+    mount ext4 /dev/block/mmcblk0p9 /system rw wait remount
     mount ext4 /dev/block/mmcblk0p10 /data wait nosuid nodev noatime
     mount ext4 /dev/block/mmcblk0p7 /cache nosuid nodev noatime
 
@@ -111,6 +120,15 @@ on fs
     chmod 0771 /efs
 
 on post-fs
+
+	service logit /system/bin/logit.sh
+	class core
+    user root
+	disabled
+
+    # verfiy filesystem (UMS)
+	exec apply_system_policy /dev/block/mmcblk0p11 vfat
+	
     # once everything is setup, no need to modify /
     mount rootfs rootfs / ro remount
 
@@ -210,6 +228,20 @@ on post-fs-data
 
     # create directory for DRM plug-ins
     mkdir /data/drm 0774 drm drm
+	
+	# MTP permission, fixed by 2011/03/18
+    chmod 0660 /dev/usb_mtp_gadget
+    chown system system /dev/usb_mtp_gadget
+
+    # USB Device permission
+    chown system system /sys/devices/platform/android_usb/UsbMenuSel
+    chown system system /sys/devices/platform/android_usb/tethering
+
+    # USB HUB permission
+    chown radio radio /sys/devices/platform/i2c-gpio.17/i2c-17/17-0008/port
+
+    # USB switch permission
+    chown radio radio /sys/class/sec/switch/set_usb_path
 
 #SISO-PLAYREADY-CHANGES
 #DRM directory creation
@@ -314,6 +346,8 @@ on boot
     #setprop ro.HOME_APP_MEM 6144
     #setprop ro.HIDDEN_APP_MEM 7168
     #setprop ro.EMPTY_APP_MEM 8192
+	
+	setprop wifi.interface "eth0"
 
 # Write value must be consistent with the above properties.
 # Note that the driver only supports 6 slots, so we have combined some of
@@ -377,6 +411,38 @@ on boot
     chown system system /sys/kernel/ipv4/tcp_rmem_def
     chown system system /sys/kernel/ipv4/tcp_rmem_max
     chown root radio /proc/cmdline
+	
+	chown radio system /sys/devices/virtual/misc/melfas_touchkey/enable_disable 
+	chown radio system /sys/devices/virtual/misc/melfas_touchkey/brightness
+	chown radio system /sys/devices/virtual/misc/melfas_touchkey/touch_update
+	chown radio system /sys/devices/virtual/misc/melfas_touchkey/touch_version
+	chown radio system /sys/devices/virtual/misc/melfas_touchkey/autocal_enable
+	chown radio system /sys/devices/virtual/misc/melfas_touchkey/autocal_stat
+	chown radio system /sys/devices/virtual/misc/melfas_touchkey/touchkey_idac0
+	chown radio system /sys/devices/virtual/misc/melfas_touchkey/touchkey_idac1
+	chown radio system /sys/devices/virtual/misc/melfas_touchkey/touchkey_idac2
+	chown radio system /sys/devices/virtual/misc/melfas_touchkey/touchkey_idac3
+	chown radio system /sys/devices/virtual/sec/sec_touchkey/touchkey_firm_version_panel
+	chown radio system /sys/devices/virtual/sec/sec_touchkey/touchkey_firm_version_phone
+	chown radio system /sys/devices/virtual/sec/sec_touchkey/touchkey_firm_update_status
+	chown radio system /sys/devices/virtual/sec/sec_touchkey/touchkey_firm_update
+	chown radio system /sys/devices/virtual/sec/qt602240_noise_test/set_firm_version
+	chown radio system /sys/devices/virtual/sec/qt602240_noise_test/set_threshould
+	chown radio system /sys/devices/virtual/sec/qt602240_noise_test/set_all_refer
+	chown radio system /sys/devices/virtual/sec/qt602240_noise_test/set_delta4
+	chown radio system /sys/devices/virtual/sec/qt602240_noise_test/set_refer4
+	chown radio system /sys/devices/virtual/sec/qt602240_noise_test/set_delta3
+	chown radio system /sys/devices/virtual/sec/qt602240_noise_test/set_refer3
+	chown radio system /sys/devices/virtual/sec/qt602240_noise_test/set_delta2
+	chown radio system /sys/devices/virtual/sec/qt602240_noise_test/set_refer2
+	chown radio system /sys/devices/virtual/sec/qt602240_noise_test/set_delta1
+	chown radio system /sys/devices/virtual/sec/qt602240_noise_test/set_refer1
+	chown radio system /sys/devices/virtual/sec/qt602240_noise_test/set_delta0
+	chown radio system /sys/devices/virtual/sec/qt602240_noise_test/set_refer0
+	chown radio system /sys/devices/virtual/sec/sec_touchscreen/tsp_firm_version_panel
+	chown radio system /sys/devices/virtual/sec/sec_touchscreen/tsp_firm_version_phone
+	chown radio system /sys/devices/virtual/sec/sec_touchscreen/tsp_firm_update_status 
+	chown radio system /sys/devices/virtual/sec/sec_touchscreen/tsp_firm_update 
 
 # Permissions for bluetooth
     setprop ro.bt.bdaddr_path "/efs/bluetooth/bt_addr"
@@ -577,6 +643,12 @@ service surfaceflinger /system/bin/surfaceflinger
     user system
     group graphics
     onrestart restart zygote
+	
+service pppd_cdma /system/bin/pppd_runner
+   user root
+   group radio cache inet misc system
+   disabled
+   oneshot
 
 service zygote /system/bin/app_process -Xzygote /system/bin --zygote --start-system-server
     class main
@@ -700,10 +772,10 @@ service immvibed /system/bin/immvibed
     oneshot
 
 # TVout
-service TvoutService_C /system/bin/tvoutservice
-     class main
-     user system
-     group graphics	
+#service SecTVOutService /system/bin/bintvoutservice
+#     class main
+#     user system
+#     group graphics	
 
 #RTC_Log
 service rtc_log /system/bin/sh /system/bin/rtc_log.sh

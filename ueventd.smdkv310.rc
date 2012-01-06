@@ -7,8 +7,8 @@
 /dev/urandom              0666   root       root
 /dev/ashmem               0666   root       root
 /dev/binder               0666   root       root
-/dev/video14              0660   system     system
-/dev/video21              0660   system     system
+/dev/video14              0666   system     system
+/dev/video21              0666   system     system
 /dev/pmem_gpu1            0660   system     graphics
 
 
@@ -92,6 +92,7 @@
 
 # mfc
 /dev/s3c-mfc              0660   system     graphics
+/dev/s3c-mem			  0666	 system		system
 
 # for usb printer
 /dev/usb/lp*              0660   system     usb

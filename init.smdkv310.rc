@@ -2,9 +2,12 @@ import init.smdkv310.usb.rc
 
 on early-init
     export EXTERNAL_STORAGE /mnt/sdcard
-    mkdir /mnt/sdcard 0000 system system
+    mkdir /mnt/sdcard 0755 system system
+	mkdir /mnt/external_sd 0775 system system
+    mkdir /mnt/usbStorage 0000 system system
     # for backwards compatibility
     symlink /mnt/sdcard /sdcard
+	symlink /mnt/external_sd /sdcard
 
 on post-fs-data
     # give system access to wpa_supplicant.conf for backup and restore
@@ -34,8 +37,8 @@ on boot
 
     mount debugfs /sys/kernel/debug /sys/kernel/debug
 
-    setprop ro.build.product SPH-D710
-    setprop ro.product.device SPH-D710
+    setprop ro.build.product smdkv310
+    setprop ro.product.device smdkv310
     setprop ro.radio.noril yes
 
 # Permisions for sensors
@@ -49,6 +52,22 @@ on boot
     setprop ro.nfc.port "I2C"
     chmod 0600 /dev/pn544
     chown nfc nfc /dev/pn544
+	
+#permissions for dpram
+    chmod 0666 /dev/dpram0
+    chmod 0666 /dev/dpram1
+    chmod 0666 /dev/dpramerr
+    chmod 0666 /dev/ttyCDMA0
+    chmod 0666 /dev/ttyCPLOG0
+    chown radio radio /dev/dpram0
+    chown radio radio /dev/dpram1
+    chown radio radio /dev/ttyCPLOG0
+
+#Wimax 
+    chmod 660 /dev/swmxctl
+    chmod 660 /dev/uwibro
+    chown system system /dev/swmxctl
+    chown system system /dev/uwibro	
 
 # Device Encryption by B2B Security Lab. 
     setprop ro.crypto.keyfile.userdata /efs/metadata
@@ -65,21 +84,81 @@ service notified_event /system/bin/notified_event
     group system
     socket notified_event stream 0660 root system
     
-service tscald /system/bin/tscald /data/data/com.samsung.app.sec_tscal/cal.conf /sys/devices/platform/s3c64xx-ts/set_tscal
-    user root
-    group root
-    oneshot
+#service tscald /system/bin/tscald /data/data/com.samsung.app.sec_tscal/cal.conf /sys/devices/platform/s3c64xx-ts/set_tscal
+#    user root
+#    group root
+#    oneshot
+	
+# Samsung USB Mode : system properties are linked with sysfs
+# write /sys/class/sec/switch/UsbMenuSel 0
+on property:persist.service.usb.setting=0
+	write /sys/devices/platform/android_usb/UsbMenuSel 0
+on property:persist.service.usb.setting=1
+	write /sys/devices/platform/android_usb/UsbMenuSel 1
+on property:persist.service.usb.setting=2
+	write /sys/devices/platform/android_usb/UsbMenuSel 2
+on property:persist.service.usb.setting=3
+	write /sys/devices/platform/android_usb/UsbMenuSel 3
+on property:persist.service.usb.setting=4
+	write /sys/devices/platform/android_usb/UsbMenuSel 4
 
-service wpa_supplicant /system/bin/wpa_supplicant \
+# USB HUB : system properties are linked with sysfs
+#  bit :    3     2      1         0
+#          AP,   CP, WIMAX, RESERVED
+# Enable AP, CP, WIMAX
+on property:persist.service.usb.hubport=0
+	write /sys/devices/platform/i2c-gpio.17/i2c-17/17-0008/port enable_wimax
+	write /sys/devices/platform/i2c-gpio.17/i2c-17/17-0008/port enable_cp
+	write /sys/devices/platform/i2c-gpio.17/i2c-17/17-0008/port enable_ap
+	write /sys/class/sec/switch/set_usb_path ALL
+on property:persist.service.usb.hubport=2
+	write /sys/devices/platform/i2c-gpio.17/i2c-17/17-0008/port disable_wimax
+	write /sys/devices/platform/i2c-gpio.17/i2c-17/17-0008/port enable_cp
+	write /sys/devices/platform/i2c-gpio.17/i2c-17/17-0008/port enable_ap
+	write /sys/class/sec/switch/set_usb_path ALL
+on property:persist.service.usb.hubport=4
+	write /sys/devices/platform/i2c-gpio.17/i2c-17/17-0008/port enable_wimax
+	write /sys/devices/platform/i2c-gpio.17/i2c-17/17-0008/port disable_cp
+	write /sys/devices/platform/i2c-gpio.17/i2c-17/17-0008/port enable_ap
+	write /sys/class/sec/switch/set_usb_path AP
+on property:persist.service.usb.hubport=6
+	write /sys/devices/platform/i2c-gpio.17/i2c-17/17-0008/port disable_wimax
+	write /sys/devices/platform/i2c-gpio.17/i2c-17/17-0008/port disable_cp
+	write /sys/devices/platform/i2c-gpio.17/i2c-17/17-0008/port enable_ap
+	write /sys/class/sec/switch/set_usb_path AP
+on property:persist.service.usb.hubport=8
+	write /sys/devices/platform/i2c-gpio.17/i2c-17/17-0008/port enable_wimax
+	write /sys/devices/platform/i2c-gpio.17/i2c-17/17-0008/port enable_cp
+	write /sys/devices/platform/i2c-gpio.17/i2c-17/17-0008/port disable_ap
+	write /sys/class/sec/switch/set_usb_path CP
+on property:persist.service.usb.hubport=10
+	write /sys/devices/platform/i2c-gpio.17/i2c-17/17-0008/port disable_wimax
+	write /sys/devices/platform/i2c-gpio.17/i2c-17/17-0008/port enalbe_cp
+	write /sys/devices/platform/i2c-gpio.17/i2c-17/17-0008/port disable_ap
+	write /sys/class/sec/switch/set_usb_path CP
+on property:persist.service.usb.hubport=12
+	write /sys/devices/platform/i2c-gpio.17/i2c-17/17-0008/port enable_wimax
+	write /sys/devices/platform/i2c-gpio.17/i2c-17/17-0008/port disable_cp
+	write /sys/devices/platform/i2c-gpio.17/i2c-17/17-0008/port disable_ap
+on property:persist.service.usb.hubport=14
+	write /sys/devices/platform/i2c-gpio.17/i2c-17/17-0008/port disable_wimax
+	write /sys/devices/platform/i2c-gpio.17/i2c-17/17-0008/port disable_cp
+	write /sys/devices/platform/i2c-gpio.17/i2c-17/17-0008/port disable_ap
+
+#service wpa_supplicant /system/bin/wpa_supplicant \
     -Dnl80211 -puse_p2p_group_interface=1 -e/data/misc/wifi/entropy.bin
     #   we will start as root and wpa_supplicant will switch to user wifi
     #   after setting up the capabilities required for WEXT
     #   user wifi
     #   group wifi inet keystore
-    class main
-    socket wpa_wlan0 dgram 0660 wifi wifi
+service wpa_supplicant /system/bin/wpa_supplicant -Dwext -ieth0 -c/data/wifi/bcm_supp.conf
+	class main
     disabled
-    oneshot
+    oneshot 
+
+#    socket wpa_eth0 dgram 0660 wifi wifi
+#    disabled
+#    oneshot
 
 #for WiFi MFG(TestMode)
 service mfgloader /system/bin/mfgloader
@@ -96,7 +175,7 @@ service macloader /system/bin/macloader
     oneshot
 # end of wifi
 
-service dhcpcd_wlan0 /system/bin/dhcpcd -ABKL
+service dhcpcd_eth0 /system/bin/dhcpcd -ABKL
     class main
     disabled
     oneshot
@@ -106,7 +185,7 @@ service dhcpcd_p2p /system/bin/dhcpcd -aABKL
     disabled
     oneshot
 
-service iprenew_wlan0 /system/bin/dhcpcd -n
+service iprenew_eth0 /system/bin/dhcpcd -n
     class main
     disabled
     oneshot
